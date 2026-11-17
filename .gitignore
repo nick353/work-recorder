@@ -1,0 +1,7 @@
+.venv/
+config.json
+__pycache__/
+*.mov
+*.mp4
+*.m4a
+.DS_Store
