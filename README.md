@@ -1,67 +1,93 @@
-# Work Recorder（作業録画）
+# Work Recorder
 
-手作業を**声つきで画面録画**して、AI（Claude Code・Codex など）に渡し、毎日の仕事（スキル）にするための macOS の道具です。
-言葉で説明すると AI の理解がずれやすい作業を、録画でそのまま渡せます。
+[日本語](README.ja.md) | English
 
-- 画面の端に黒い切り欠き（サイドノッチ）が貼りつき、マウスを寄せると「● 録画」が出てきます。
-- 長押しでつまんで上下・左右に運べ、離すと近い方の端へ吸い寄せられます。
-- 録画はこの Mac の中だけに貯まり、話し声の文字起こしと画面のコマ一覧が自動で作られます。
-- AI に「作業録画を見て」と言うと、手順を書き起こして、どの作業にするか提案し、スキルにします。
+**A macOS side-notch button that screen-records your manual work with your voice, so an AI agent (Claude Code, Codex...) can turn it into a reusable skill.**
 
-## いちばん簡単な入れ方（AI に任せる）
-このリポジトリを手元に置き、Claude Code か Codex をこのフォルダで開いて、こう頼むだけです。
+<!-- demo -->
+<!-- Put the demo GIF at docs/demo.gif and show it here: ![demo](docs/demo.gif) -->
 
-> このリポジトリをセットアップして
+## Why
 
-AI が `AGENTS.md` の手順で、入れる → 権限のお願い → 点検 → 使い方の説明、まで進めます。
-（システム設定の権限のスイッチだけは、本人が入れます）
+Explaining a task in words makes an AI misunderstand it. Showing it once, while talking, does not.
+Work Recorder gives you a button on the edge of your screen: press, do the task out loud, press again. Everything - the video, a transcript of what you said, and a contact sheet of frames with timestamps - is prepared locally and laid out so an AI can read it, write the steps, and turn them into a skill.
 
-## 手で入れる
+- A black notch is docked to the edge of the screen. Move the mouse there and a **Record** button slides out.
+- Pick it up with a long press to move it up/down or to the other edge. It snaps back and remembers the spot.
+- Recordings stay on your Mac. Speech-to-text runs locally. Nothing is uploaded.
+- Say "review my work recording" to your AI. It reads the recording, proposes how to run the task, and writes the skill.
+- UI text follows your Mac language (Japanese or English).
+
+## Requirements
+- macOS 12 or later (Apple silicon or Intel)
+- [Homebrew](https://brew.sh) (used to install Hammerspoon and ffmpeg)
+- Python 3.9+ (included with the Xcode command line tools)
+- Free disk space: ~200MB for transcription, plus a ~500MB speech model downloaded on first use (optional: `--no-transcribe`)
+
+## Install (one line)
 ```bash
-git clone <このリポジトリ> ~/work-recorder
-cd ~/work-recorder
-./install.sh          # 文字起こしが要らなければ --no-transcribe
+git clone https://github.com/nick353/work-recorder.git ~/work-recorder && ~/work-recorder/install.sh
 ```
-そのあと、システム設定 > プライバシーとセキュリティ で **Hammerspoon** を入にします。
-1. **画面収録**（必須。入にしたら Hammerspoon を開き直す）
-2. **マイク**（声つきで録るとき）
-3. **アクセシビリティ**（任意。窓の名前を記録する）
+Flags: `--no-transcribe` (skip speech-to-text), `--no-skill` (do not install the AI skill), `--no-open` (do not open System Settings). Running it again is safe.
 
-点検は `./doctor.sh`、外すのは `./uninstall.sh`（録画は消しません）。
+Or let your AI do it: open the folder in Claude Code / Codex and say *"set up this repository"* - it follows [AGENTS.md](AGENTS.md).
 
-## 使い方
-[docs/USAGE.md](docs/USAGE.md) を見てください（入れ終わると install.sh も表示します）。
+Then, in **System Settings > Privacy & Security**, turn on **Hammerspoon** for:
+1. **Screen Recording** (required; quit and reopen Hammerspoon afterwards)
+2. **Microphone** (to record with voice)
+3. **Accessibility** (optional; logs window titles)
 
-## 必要なもの
-- macOS（Apple シリコン・Intel どちらも）
-- [Homebrew](https://brew.sh)（Hammerspoon と ffmpeg を入れるのに使います）
-- python3（macOS の開発ツールに入っています）
+Check everything with `./doctor.sh`.
 
-## 仕組み
-| 部品 | 役目 |
-|---|---|
-| `hammerspoon/recorder.lua` | 端のボタン（サイドノッチ）・つまんで運ぶ・録画の開始と停止・使ったアプリとページの記録 |
-| `scripts/rec-run.sh` | macOS 標準の `screencapture -v` を動かし続け、合図で止める。声は ffmpeg で別に録る |
-| `scripts/ingest.sh` | 止めたあと、動画を縮めて声と合わせ、下ごしらえを呼ぶ |
-| `scripts/prep.py` | コマ一覧（秒数つき）・文字起こし・`MANIFEST.md`（AI が読む入口）を作る |
-| `scripts/rec.py` | 録画の台帳（未相談・相談中・スキル化済み・見送り） |
-| `skill/SKILL.md` | AI が録画を読んで、スキルにするまでの手順（install.sh が Claude Code・Codex に入れる） |
+## Use
+See [docs/USAGE.md](docs/USAGE.md). In short:
+1. Move the mouse to the screen edge -> click **Record** -> talk while you work -> click again (or press `ctrl+option+cmd+R`). Hold `option` while clicking to record without voice.
+2. Wait for the "Recording saved" notification.
+3. Tell your AI: **"review my work recording"**.
 
-録画1本の中身: `recording.mp4`・`events.jsonl`（アプリ・窓・URL の流れ）・`prep/`（MANIFEST.md・sheets・frames・transcript.txt）・`meta.json`。
-
-## 設定（任意）
-`config.json`（install.sh が `config.example.json` から作る）
+## Configuration
+`config.json` (created by `install.sh` from `config.example.json`; it is git-ignored):
 ```json
-{ "recordings_dir": "~/Movies/作業録画", "whisper_model": "small", "language": "ja" }
+{
+  "recordings_dir": "~/Movies/WorkRecorder",
+  "whisper_model": "small",
+  "language": "",
+  "ui_language": "auto"
+}
 ```
+| Key | Meaning |
+|---|---|
+| `recordings_dir` | Where recordings are stored. |
+| `whisper_model` | faster-whisper model: `tiny`, `base`, `small`, `medium`, `large-v3`... |
+| `language` | Speech language code (`en`, `ja`...). Empty = auto-detect. |
+| `ui_language` | `ja`, `en`, or `auto` (follow macOS). |
 
-## 知っておくこと
-- 画面全体を録るので、パスワードや個人情報が写ることがあります。録画は外へ送りませんが、録るときは気をつけてください。
-- 外付けの画面を横に並べていると、その側の端はマウスが通り過ぎやすいです。外付けの画面が無い側の端に置くと使いやすくなります。
-- macOS の `screencapture -g`（声つき録画）は動画が壊れることがあるため、声は別に録って合わせています。
+After editing `config.json`, reload Hammerspoon (menu bar icon > Reload Config).
 
----
+## Uninstall
+`./uninstall.sh` removes the Hammerspoon lines and the installed skill. **Your recordings are not deleted.** Hammerspoon and ffmpeg stay (remove with `brew uninstall --cask hammerspoon`, `brew uninstall ffmpeg`).
 
-## English quickstart
-A macOS side-notch button to screen-record your manual work with narration, so an AI agent (Claude Code, Codex) can turn it into a reusable skill.
-Open this folder in Claude Code or Codex and say **"set up this repository"** — the agent follows `AGENTS.md`. Or run `./install.sh`, grant Hammerspoon *Screen Recording* (and *Microphone*, optionally *Accessibility*) in System Settings, then `./doctor.sh`. The UI text is Japanese.
+## How it works
+| Part | Role |
+|---|---|
+| `hammerspoon/recorder.lua` | The edge notch, drag & snap, start/stop, logging of the front app / window / Chrome URL every 2s |
+| `scripts/rec-run.sh` | Keeps macOS `screencapture -v` alive until told to stop; records your voice separately with ffmpeg |
+| `scripts/ingest.sh` | After stopping: shrinks the video, merges voice, calls prep |
+| `scripts/prep.py` | Makes timestamped contact sheets, transcript and `MANIFEST.md` (the entry point for the AI) |
+| `scripts/rec.py` | Recording ledger (pending / consulting / done / skipped) |
+| `skill/SKILL.md` | How an AI turns a recording into a skill (installed for Claude Code and Codex) |
+
+One recording folder contains `recording.mp4`, `events.jsonl` (app / window / URL timeline), `prep/` (`MANIFEST.md`, `sheets/`, `frames/`, `transcript.txt`) and `meta.json`.
+
+## Privacy
+- The whole screen is recorded, so passwords or personal data may appear. **Recordings stay on your Mac**: no network calls are made by this tool, and transcription runs locally. The first transcription downloads the speech model from Hugging Face (a one-time download of the model only).
+- If you hand a recording to a cloud AI (Claude Code, Codex...), the frames and text it reads are sent to that service by that tool. Record accordingly.
+- Window titles and Chrome page URLs are logged into `events.jsonl` while recording (macOS may ask for Accessibility permission for titles).
+
+## Notes
+- With an external display placed to the side, the mouse can fly past that edge. Dock the notch on the edge that has no neighbor display.
+- macOS `screencapture -g` (recording with sound) can produce a broken video, so the voice is recorded separately and merged afterwards.
+- `meta.json` stores the status as Japanese words (`未相談` = pending, `相談中` = consulting, `スキル化済み` = done, `見送り` = skipped). `rec.py set <id> pending|consulting|done|skipped` accepts English.
+
+## License
+[MIT](LICENSE)

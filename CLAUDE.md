@@ -1,3 +1,3 @@
-このリポジトリのセットアップと使い方の手順は AGENTS.md にあります。セットアップを頼まれたら、AGENTS.md の手順を上から最後まで進め、最後に docs/USAGE.md の使い方を利用者に見せてください。
+Setup and usage instructions for this repository are in AGENTS.md. When asked to set it up, follow AGENTS.md from top to bottom and finish by showing the user docs/USAGE.md (docs/USAGE.ja.md for Japanese speakers).
 
 @AGENTS.md

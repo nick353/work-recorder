@@ -1,35 +1,37 @@
-## Work Recorder（作業録画）の使い方
+## How to use Work Recorder
 
-あなたが手作業を1回やって見せる → AI がそれを手順に書き起こし、毎日の仕事（スキル）にする、ための道具です。
-言葉で説明するとずれやすい作業を、録画でそのまま渡せます。
+[日本語](USAGE.ja.md)
 
-### 1. 録る
-- 画面の**右端**にマウスを寄せると、黒い切り欠きが出てきます（ふだんは細い黒い線だけ）。
-- **● 録画** を押すと録画が始まります。**声で理由を話しながら**作業してください（「ここは数字が大きいから選ぶ」「この会社は飛ばす、理由は〜」）。声が文字になり、AI が「なぜそうしたか」まで読めます。
-- 録画中は赤い ■ と経過時間が出ます。もう一度押すと止まり、保存されます。
-- 声なしで録るときは、option キーを押しながら ● を押します。
-- キーボードの **ctrl + option + cmd + R** でも、録画の開始と停止ができます。
+Show a manual task once -> an AI agent writes it up as steps and turns it into a reusable skill.
+Things that are hard to explain in words are easy to hand over as a recording.
 
-### 2. 置き場所を変える
-- 切り欠きを**長押し**（または押したまま動かす）でつまめます。上下にも、反対の端にも運べます。
-- 離すと、左右の近い方の端へ吸い寄せられて貼りつきます。位置は覚えています。
+### 1. Record
+- Move the mouse to the **right edge** of the screen. A black notch slides out (when idle it is just a thin black line).
+- Click **Record**. **Talk while you work** ("I pick this one because the number is high", "skip this company because..."). Your voice is transcribed, so the AI can read *why* you did each thing.
+- While recording you see a red square and the elapsed time. Click again to stop and save.
+- To record without voice, hold the **option** key while clicking.
+- **ctrl + option + cmd + R** also starts and stops recording.
 
-### 3. 貯まる
-- 止めると、この Mac の中だけに保存されます（初めは `~/Movies/作業録画`）。外へは送りません。
-- 裏で動画を縮め、話し声の文字起こしと、画面のコマ一覧を作ります（長い録画ほど時間がかかります）。終わると通知が出ます。
-- 切り欠きの「**未相談 N**」が、AI との相談を待っている録画の本数です。押すと録画のフォルダが開きます。
+### 2. Move the notch
+- **Press and hold** the notch (or press and drag) to pick it up. Move it up/down or to the opposite edge.
+- When you let go it snaps to the nearest left/right edge. The position is remembered.
 
-### 4. AI に渡して、仕事にする
-- Claude Code や Codex に「**作業録画を見て**」と言います（入れたスキル `work-recorder` が使われます）。
-- AI が録画を読んで、手順を番号つきで書き起こし、「これは〈どの仕事〉の〈どの作業〉として、〈どのくらいの頻度で〉回すのがよい」と提案します。読み取れなかった判断は質問します。
-- 決まったら、AI がその作業をスキル（次から AI が同じやり方でできる手順書）にします。最初の実行を録画と見比べて、ずれを直してから任せます。
+### 3. Recordings pile up
+- When you stop, the recording is saved on this Mac only (default `~/Movies/WorkRecorder`; change `recordings_dir` in `config.json`). Nothing is uploaded.
+- In the background the video is shrunk, your speech is transcribed and contact sheets of the screen are made (longer recordings take longer). A notification appears when done.
+- **Pending N** on the notch is the number of recordings waiting for the AI. Click it to open the recordings folder.
 
-### 録るとよい作業
-- **判断が入る作業**ほど録る価値があります（クリックだけの作業より、「なぜそれを選んだか」が入る作業）。
-- 例: 競合の調べ方、投稿や題材の選び方、応募する求人の選び方、毎週の数字のまとめ方。
-- 1本は5〜15分くらいで十分です。
+### 4. Hand it to the AI
+- Tell Claude Code or Codex: "**review my work recording**" (the installed `work-recorder` skill is used; "作業録画を見て" works too).
+- The AI reads the recording, writes numbered steps, and proposes "this is task X of job Y, to be run at frequency Z". It asks about decisions it could not infer.
+- Once you agree, the AI turns it into a skill (a written procedure it can follow next time), compares the first run with your recording, fixes the differences, and then takes over.
 
-### 困ったとき
-- 録画が保存されない → システム設定 > プライバシーとセキュリティ > **画面収録** で Hammerspoon を入にし、Hammerspoon を開き直す。
-- 点検: この道具のフォルダで `./doctor.sh` を流すと、直す所が出ます。
-- 外す: `./uninstall.sh`（録画そのものは消しません）。
+### Good things to record
+- Tasks that involve **judgment** are worth the most (not just clicks - the "why I chose this" part).
+- Examples: how you research competitors, how you pick topics, how you assemble a weekly report, how you prepare invoices or stock sheets.
+- 5-15 minutes per recording is plenty.
+
+### Troubleshooting
+- Recording is not saved -> System Settings > Privacy & Security > **Screen Recording**: enable Hammerspoon, then quit and reopen Hammerspoon.
+- Health check: run `./doctor.sh` in the tool's folder; it prints what to fix.
+- Remove: `./uninstall.sh` (your recordings are not deleted).
