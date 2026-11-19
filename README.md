@@ -5,7 +5,7 @@
 **A macOS side-notch button that screen-records your manual work with your voice, so an AI agent (Claude Code, Codex...) can turn it into a reusable skill.**
 
 <!-- demo -->
-<!-- Put the demo GIF at docs/demo.gif and show it here: ![demo](docs/demo.gif) -->
+<p align="center"><img src="docs/screenshot.png" width="220" alt="The Record button opens from the screen edge"></p>
 
 ## Why
 
@@ -88,6 +88,9 @@ One recording folder contains `recording.mp4`, `events.jsonl` (app / window / UR
 - With an external display placed to the side, the mouse can fly past that edge. Dock the notch on the edge that has no neighbor display.
 - macOS `screencapture -g` (recording with sound) can produce a broken video, so the voice is recorded separately and merged afterwards.
 - `meta.json` stores the status as Japanese words (`未相談` = pending, `相談中` = consulting, `スキル化済み` = done, `見送り` = skipped). `rec.py set <id> pending|consulting|done|skipped` accepts English.
+
+## Related
+- [AI Usage Notch](https://github.com/nick353/ai-usage-notch) — a matching edge notch that shows how much of your Claude, Codex, Gemini and OpenCode limits are left.
 
 ## License
 [MIT](LICENSE)

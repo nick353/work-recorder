@@ -5,7 +5,7 @@
 **画面の端のサイドノッチから、手作業を声つきで画面録画し、AI（Claude Code・Codex など）に渡して、繰り返せる仕事（スキル）にするための macOS の道具です。**
 
 <!-- demo -->
-<!-- docs/demo.gif を置いたら、ここに ![demo](docs/demo.gif) を足す -->
+<p align="center"><img src="docs/screenshot.png" width="220" alt="画面の端から開く録画ボタン"></p>
 
 ## なぜ便利か
 言葉で説明すると、AI の理解はずれます。1回やって見せれば、ずれません。
@@ -87,6 +87,9 @@ AI に任せるなら、Claude Code か Codex でこのフォルダを開いて�
 - 外付けの画面を横に並べていると、その側の端はマウスが通り過ぎやすいです。隣の画面が無い側の端に置くと使いやすくなります。
 - macOS の `screencapture -g`（音つき録画）は動画が壊れることがあるため、声は別に録って合わせています。
 - `meta.json` の状態は日本語の語（`未相談`・`相談中`・`スキル化済み`・`見送り`）で保存します。`rec.py set` では英語（pending・consulting・done・skipped）も使えます。
+
+## 関連
+- [AI Usage Notch](https://github.com/nick353/ai-usage-notch) — 同じ形の出っぱりで、Claude・Codex・Gemini・OpenCode の枠の残りを見られる道具。
 
 ## ライセンス
 [MIT](LICENSE)
