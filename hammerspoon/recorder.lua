@@ -252,7 +252,7 @@ local function settle()
   if wantOpen() then
     animateTo(OPEN_W)
   else
-    closeTimer = hs.timer.doAfter(0.45, function()
+    closeTimer = hs.timer.doAfter(1.0, function()
       closeTimer = nil
       if not wantOpen() and mode == "docked" then tip:hide(); animateTo(REST_W) end
     end)
@@ -398,9 +398,8 @@ notch:mouseCallback(function(_, msg, id)
       cachedCount = pendingCount()
       settle()
     elseif msg == "mouseExit" then
-      hovering = false
+      -- ここでは閉じない。閉じるかは端の見張りが広いゆとりで決める
       tip:hide()
-      settle()
     end
     return
   end
@@ -434,8 +433,16 @@ local edgeWatch = hs.timer.doEvery(1 / 20, function()
   local m = hs.mouse.absolutePosition()
   if hovering then
     -- 外の画面へ抜けると「出た」の合図が来ないことがある。ノッチの外に出ていたら閉じる側へ
+    -- 外かどうかは「開ききった形」＋内側に広いゆとりで見る。開く途中の細い形で見ると、
+    -- ボタンへ指を動かす途中で外と見て閉じていた（2026-11-19 オーナー「押そうとしたら引っ込むのが早すぎる」）
     local nf = notch:frame()
-    if m.x < nf.x - 4 or m.x > nf.x + nf.w + 4 or m.y < nf.y - 4 or m.y > nf.y + nf.h + 4 then
+    local outX
+    if side == "left" then
+      outX = m.x < f.x - 4 or m.x > f.x + OPEN_W + 36
+    else
+      outX = m.x < f.x + f.w - OPEN_W - 36 or m.x > f.x + f.w + 4
+    end
+    if outX or m.y < nf.y - 24 or m.y > nf.y + nf.h + 24 then
       hovering = false
       tip:hide()
       settle()
