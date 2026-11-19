@@ -1,17 +1,18 @@
--- Work Recorder（作業録画）のボタン。画面の端に黒い切り欠き（サイドノッチ）を貼り、マウスを寄せるとボタンが出てくる。
--- 手作業を声つきで録画し、あとで AI（Claude Code / Codex など）に渡して、毎日の仕事（スキル）にするための道具。
---   ふだん: 端に細い黒い線だけ。マウスを寄せるとノッチが出てくる。
---   ● 録画: 押すと録画（声あり）。option を押しながらで声なし。録画中はノッチが出たままで赤い ■ と時間。押すと止めて保存。
---   未相談: AI との相談を待っている録画の本数。押すと録画の一覧のフォルダ。
---   長押し（0.25秒）か押したまま動かすとつまめる: 上下に動かす・反対の端へ運ぶ。離すと近い方の端へ吸い寄せられて貼りつく。位置は覚える。
---   ctrl+option+cmd+R でも開始・停止。外から: open -g "hammerspoon://rec-toggle?voice=0"
--- 止めたら scripts/ingest.sh が縮めて下ごしらえ（文字起こし・コマ一覧）する。録画はこの Mac の中にだけ置き、外へは送らない。
+-- Work Recorder: a black "side notch" docked to a screen edge. Move the mouse to the edge and the buttons slide out.
+-- Record a manual task with your voice, then hand it to an AI (Claude Code / Codex ...) to turn it into a reusable skill.
+--   Idle: just a thin black line on the edge. Hover and the notch slides out.
+--   Record: click to record (with voice). Hold option for no voice. While recording: red square + timer. Click again to stop and save.
+--   Pending: number of recordings waiting for the AI. Click to open the recordings folder.
+--   Press-and-hold (0.25s) or drag to move it: up/down, or to the opposite edge. It snaps to the nearest edge and remembers the spot.
+--   ctrl+option+cmd+R also toggles recording. From outside: open -g "hammerspoon://rec-toggle?voice=0"
+-- After stopping, scripts/ingest.sh shrinks the video and prepares transcript + contact sheets. Everything stays on this Mac.
+-- (UI text switches between Japanese and English by the Mac's language. config.json "ui_language": "ja" | "en" overrides.)
 
 local M = {}
 local HOME = os.getenv("HOME")
 -- この道具の置き場（このファイルの2つ上）。どこに置いても動く
 local BASE = debug.getinfo(1, "S").source:sub(2):match("^(.*)/hammerspoon/[^/]+$") or (HOME .. "/work-recorder")
--- 設定（任意）: <置き場>/config.json に {"recordings_dir": "~/Movies/作業録画"}
+-- Config (optional): <install dir>/config.json, e.g. {"recordings_dir": "~/Movies/WorkRecorder"}
 local function loadConfig()
   local f = io.open(BASE .. "/config.json", "r")
   if not f then return {} end
@@ -20,7 +21,48 @@ local function loadConfig()
   return (ok and type(c) == "table") and c or {}
 end
 local CONFIG = loadConfig()
-local ROOT = (CONFIG.recordings_dir or "~/Movies/作業録画"):gsub("^~", HOME)
+local ROOT = (CONFIG.recordings_dir or "~/Movies/WorkRecorder"):gsub("^~", HOME)
+
+---------------------------------------------------------------- Language (ja / en)
+local function detectLang()
+  local forced = CONFIG.ui_language
+  if forced == "ja" or forced == "en" then return forced end
+  local ok, langs = pcall(function() return hs.host.locale.preferredLanguages() end)
+  local first = ok and type(langs) == "table" and langs[1] or ""
+  return tostring(first):lower():match("^ja") and "ja" or "en"
+end
+local LANG = detectLang()
+local STR = {
+  ja = {
+    saving = "保存中", record = "録画", preparing = "準備中", pending = "未相談",
+    tip_saving = "保存しています", tip_stop = "止めて保存する",
+    tip_start = "録画を始める（声あり）・option で声なし・長押しで動かす",
+    tip_busy = "下ごしらえ中 %d本", tip_pending = "相談を待っている録画 %d本・押すと一覧",
+    n_saved = "作業録画を保存しました",
+    n_saved_body = "AI（Claude Code・Codex など）に「作業録画を見て」と言えば、どの作業にするか相談できます（未相談 %d本）",
+    n_prep_fail = "作業録画の下ごしらえに失敗", n_prep_fail_body = "録画は残っています: %s\n%s",
+    n_nosave = "作業録画が保存されませんでした",
+    n_nosave_body = "画面収録の許可（システム設定 > プライバシーとセキュリティ > 画面収録）で Hammerspoon を入にしてください",
+    n_nostart = "録画を始められませんでした", n_nostart_body = "rec-run.sh が起動しません",
+  },
+  en = {
+    saving = "Saving", record = "Record", preparing = "Preparing", pending = "Pending",
+    tip_saving = "Saving...", tip_stop = "Stop and save",
+    tip_start = "Start recording (with voice) - hold option for no voice - press and hold to move",
+    tip_busy = "Preparing %d recording(s)", tip_pending = "%d recording(s) waiting for the AI - click to open the folder",
+    n_saved = "Recording saved",
+    n_saved_body = "Tell your AI (Claude Code, Codex...) \"review my work recording\" to turn it into a skill (%d pending)",
+    n_prep_fail = "Recording post-processing failed", n_prep_fail_body = "The recording is kept: %s\n%s",
+    n_nosave = "Recording was not saved",
+    n_nosave_body = "Turn on Hammerspoon in System Settings > Privacy & Security > Screen Recording",
+    n_nostart = "Could not start recording", n_nostart_body = "rec-run.sh failed to launch",
+  },
+}
+local function T(key, ...)
+  local s = STR[LANG][key] or STR.en[key] or key
+  if select("#", ...) > 0 then return string.format(s, ...) end
+  return s
+end
 local SKILL = BASE
 local INGEST = SKILL .. "/scripts/ingest.sh"
 
@@ -148,7 +190,7 @@ local function buttons(els, cx, top)
   local y1, y2 = top + 30, top + 84
   if rec and rec.stopping then
     for _, e in ipairs(ring("rec", cx, y1, GRAY, (pulse % (2 * math.pi)) / (2 * math.pi))) do table.insert(els, e) end
-    table.insert(els, label("保存中", cx, y1 + 17))
+    table.insert(els, label(T("saving"), cx, y1 + 17))
   elseif rec then
     local glow = 0.55 + 0.45 * math.abs(math.sin(pulse))
     for _, e in ipairs(ring("rec", cx, y1, RED, 1)) do table.insert(els, e) end
@@ -159,14 +201,14 @@ local function buttons(els, cx, top)
   else
     for _, e in ipairs(ring("rec", cx, y1, RED, 0)) do table.insert(els, e) end
     table.insert(els, { type = "circle", center = { x = cx, y = y1 }, radius = 6, action = "fill", fillColor = RED })
-    table.insert(els, label("録画", cx, y1 + 17))
+    table.insert(els, label(T("record"), cx, y1 + 17))
   end
   local frac = 0
   if busy > 0 then frac = (pulse % (2 * math.pi)) / (2 * math.pi) elseif cachedCount > 0 then frac = 1 end
   for _, e in ipairs(ring("count", cx, y2, busy > 0 and GRAY or GREEN, frac)) do table.insert(els, e) end
   table.insert(els, { type = "text", text = hs.styledtext.new(tostring(cachedCount), { font = { name = ".AppleSystemUIFontBold", size = 12 },
     color = { white = 0.92 }, paragraphStyle = { alignment = "center" } }), frame = { x = cx - 14, y = y2 - 8, w = 28, h = 16 } })
-  table.insert(els, label(busy > 0 and "準備中" or "未相談", cx, y2 + 17))
+  table.insert(els, label(busy > 0 and T("preparing") or T("pending"), cx, y2 + 17))
   return y1, y2
 end
 
@@ -407,9 +449,9 @@ notch:mouseCallback(function(_, msg, id)
     onPress(id)
   elseif msg == "mouseEnter" and not press then
     if id == "rec" then
-      showTip(rec and (rec.stopping and "保存しています" or "止めて保存する") or "録画を始める（声あり）・option で声なし・長押しで動かす", Y1)
+      showTip(rec and (rec.stopping and T("tip_saving") or T("tip_stop")) or T("tip_start"), Y1)
     elseif id == "count" then
-      showTip(busy > 0 and ("下ごしらえ中 " .. busy .. "本") or ("相談を待っている録画 " .. cachedCount .. "本・押すと一覧"), Y2)
+      showTip(busy > 0 and T("tip_busy", busy) or T("tip_pending", cachedCount), Y2)
     end
   elseif msg == "mouseExit" then
     tip:hide()
@@ -513,9 +555,9 @@ local function runIngest(dir, voice)
     cachedCount = pendingCount()
     draw()
     if code == 0 then
-      hs.notify.new({ title = "作業録画を保存しました", informativeText = "AI（Claude Code・Codex など）に「作業録画を見て」と言えば、どの作業にするか相談できます（未相談 " .. cachedCount .. "本）" }):send()
+      hs.notify.new({ title = T("n_saved"), informativeText = T("n_saved_body", cachedCount) }):send()
     else
-      hs.notify.new({ title = "作業録画の下ごしらえに失敗", informativeText = "録画は残っています: " .. dir .. "\n" .. (err or ""):sub(1, 120) }):send()
+      hs.notify.new({ title = T("n_prep_fail"), informativeText = T("n_prep_fail_body", dir, (err or ""):sub(1, 120)) }):send()
     end
   end, args)
   t:start()
@@ -543,11 +585,11 @@ start = function(voice)
     else
       -- 録画が残らなかった回は、空のフォルダを台帳に残さない
       os.remove(d .. "/events.jsonl"); os.remove(d .. "/meta.json"); os.remove(d .. "/voice.log"); os.remove(d .. "/voice.m4a"); os.remove(d)
-      hs.notify.new({ title = "作業録画が保存されませんでした", informativeText = "画面収録の許可（システム設定 > プライバシーとセキュリティ > 画面収録）で Hammerspoon を入にしてください" }):send()
+      hs.notify.new({ title = T("n_nosave"), informativeText = T("n_nosave_body") }):send()
     end
   end, args)
   if not task:start() then
-    hs.notify.new({ title = "録画を始められませんでした", informativeText = "rec-run.sh が起動しません" }):send()
+    hs.notify.new({ title = T("n_nostart"), informativeText = T("n_nostart_body") }):send()
     return
   end
   rec = { task = task, dir = dir, started = hs.timer.secondsSinceEpoch(), voice = voice, lastKey = nil }

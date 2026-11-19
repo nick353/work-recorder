@@ -1,5 +1,6 @@
 {
-  "recordings_dir": "~/Movies/作業録画",
+  "recordings_dir": "~/Movies/WorkRecorder",
   "whisper_model": "small",
-  "language": "ja"
+  "language": "",
+  "ui_language": "auto"
 }

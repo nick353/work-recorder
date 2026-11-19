@@ -14,6 +14,9 @@ import os
 import sys
 from datetime import datetime
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from i18n import t  # noqa: E402
+
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -25,11 +28,20 @@ def _root():
                 return os.path.expanduser(d)
     except Exception:
         pass
-    return os.path.expanduser("~/Movies/作業録画")
+    return os.path.expanduser("~/Movies/WorkRecorder")
 
 
 ROOT = _root()
+# The stored values are Japanese (they are written into each meta.json and read by recorder.lua).
+# English aliases are accepted on the command line.
 STATES = {"未相談", "相談中", "スキル化済み", "見送り", "録画中", "下ごしらえ中"}
+ALIASES = {"pending": "未相談", "consulting": "相談中", "done": "スキル化済み", "skipped": "見送り",
+           "recording": "録画中", "preparing": "下ごしらえ中"}
+SHOWN = {v: k for k, v in ALIASES.items()}
+
+
+def state_label(st):
+    return st if t(True, False) else SHOWN.get(st, st)
 
 
 def load(d):
@@ -64,7 +76,7 @@ def find(rid):
     for d, m in all_recs():
         if m.get("id") == rid or os.path.basename(d) == rid:
             return d, m
-    sys.exit(f"録画 {rid} が見つからない（{ROOT}）")
+    sys.exit(t(f"録画 {rid} が見つからない（{ROOT}）", f"Recording {rid} not found ({ROOT})"))
 
 
 def events(d):
@@ -91,35 +103,35 @@ def apps_summary(ev, n=6):
         a = e.get("app")
         if a and a not in seen:
             seen.append(a)
-    return "・".join(seen[:n]) + (f" ほか{len(seen) - n}" if len(seen) > n else "")
+    return t("・", ", ").join(seen[:n]) + (t(f" ほか{len(seen) - n}", f" +{len(seen) - n} more") if len(seen) > n else "")
 
 
 def cmd_list(a):
     rows = [(d, m) for d, m in all_recs() if a.all or m.get("status") == "未相談"]
     if not rows:
-        print("未相談の録画はありません" if not a.all else "録画はありません")
+        print(t("未相談の録画はありません" if not a.all else "録画はありません", "No pending recordings" if not a.all else "No recordings"))
         return
     for d, m in rows:
         ev = events(d)
-        print(f"- {m.get('id')}｜{m.get('status')}｜{mmss(m.get('duration'))}｜{'声あり' if m.get('voice') else '声なし'}｜{apps_summary(ev)}"
+        print(f"- {m.get('id')}｜{state_label(m.get('status'))}｜{mmss(m.get('duration'))}｜{t('声あり', 'voice') if m.get('voice') else t('声なし', 'no voice')}｜{apps_summary(ev)}"
               + (f"｜{m.get('business')}" if m.get("business") else "")
-              + (f"｜タスク{m.get('task')}" if m.get("task") else ""))
+              + (f"｜{t('タスク', 'task ')}{m.get('task')}" if m.get("task") else ""))
 
 
 def cmd_show(a):
     d, m = find(a.id)
     ev = events(d)
-    print(f"# 録画 {m.get('id')}（{m.get('status')}）")
-    print(f"- 置き場: {d}")
-    print(f"- 長さ: {mmss(m.get('duration'))}・{'声あり（話した説明が文字起こしにある）' if m.get('voice') else '声なし'}")
+    print(t(f"# 録画 {m.get('id')}（{m.get('status')}）", f"# Recording {m.get('id')} ({state_label(m.get('status'))})"))
+    print(t(f"- 置き場: {d}", f"- Folder: {d}"))
+    print(t("- 長さ: ", "- Length: ") + f"{mmss(m.get('duration'))} - " + (t("声あり（話した説明が文字起こしにある）", "with voice (what was said is in the transcript)") if m.get("voice") else t("声なし", "no voice")))
     for f in ("recording.mp4", "raw.mov"):
         if os.path.exists(os.path.join(d, f)):
-            print(f"- 動画: {os.path.join(d, f)}")
+            print(t("- 動画: ", "- Video: ") + os.path.join(d, f))
     man = os.path.join(d, "prep", "MANIFEST.md")
-    print(f"- 下ごしらえ: {man if os.path.exists(man) else 'まだ（ingest.log を見る）'}")
+    print(t("- 下ごしらえ: ", "- Prepared: ") + (man if os.path.exists(man) else t("まだ（ingest.log を見る）", "not yet (see ingest.log)")))
     if m.get("note"):
-        print(f"- メモ: {m['note']}")
-    print(f"\n## 使ったアプリ・窓・ページ（秒は録画の頭から。{len(ev)}件）")
+        print(t("- メモ: ", "- Note: ") + str(m["note"]))
+    print(t(f"\n## 使ったアプリ・窓・ページ（秒は録画の頭から。{len(ev)}件）", f"\n## Apps, windows and pages used (seconds from the start; {len(ev)} entries)"))
     for e in ev:
         line = f"- {mmss(e.get('t'))} {e.get('app')}｜{(e.get('title') or '')[:80]}"
         if e.get("url"):
@@ -128,8 +140,9 @@ def cmd_show(a):
 
 
 def cmd_set(a):
+    a.state = ALIASES.get(a.state, a.state)
     if a.state not in STATES:
-        sys.exit(f"状態は {sorted(STATES)} のどれか")
+        sys.exit(t(f"状態は {sorted(STATES)} のどれか", f"state must be one of {sorted(ALIASES)} (or the Japanese values {sorted(STATES)})"))
     d, m = find(a.id)
     m["status"] = a.state
     m["updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
@@ -140,7 +153,7 @@ def cmd_set(a):
     if a.business:
         m["business"] = a.business
     save(d, m)
-    print(f"{m['id']} を「{a.state}」にした")
+    print(t(f"{m['id']} を「{a.state}」にした", f"{m['id']} -> {state_label(a.state)}"))
 
 
 def cmd_finish(a):
@@ -155,7 +168,8 @@ def cmd_finish(a):
 def cmd_pending(a):
     rows = [m for _, m in all_recs() if m.get("status") == "未相談"]
     if rows:
-        print(f"- 未相談の作業録画 {len(rows)}本（新しい: {rows[-1].get('id')}）。会話の最初か依頼の区切りで、自分から「録画が{len(rows)}本あります。どの作業にするか相談しますか？」と出す。相談は work-recorder スキル")
+        print(t(f"- 未相談の作業録画 {len(rows)}本（新しい: {rows[-1].get('id')}）。会話の最初か依頼の区切りで、自分から「録画が{len(rows)}本あります。どの作業にするか相談しますか？」と出す。相談は work-recorder スキル",
+                f"- {len(rows)} work recording(s) pending (newest: {rows[-1].get('id')}). At the start of a conversation or between requests, offer: \"You have {len(rows)} recording(s). Want to turn one into a skill?\" Use the work-recorder skill."))
 
 
 def main():
